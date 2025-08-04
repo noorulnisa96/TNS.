@@ -1,0 +1,166 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TNS Inventory Tracker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #ffe6f0;
+            color: #333;
+            text-align: center;
+            padding: 20px;
+        }
+        h1 {
+            color: #d63384;
+        }
+        button {
+            padding: 12px 20px;
+            font-size: 16px;
+            margin: 10px;
+            border: none;
+            border-radius: 8px;
+            background-color: #ffffff;
+            color: #d63384;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        input {
+            padding: 10px;
+            font-size: 16px;
+            margin: 5px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+        table {
+            margin: 20px auto;
+            border-collapse: collapse;
+            width: 80%;
+            background-color: #fff0f5;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #d63384;
+        }
+        th {
+            background-color: #d63384;
+            color: white;
+        }
+        #add-product-form {
+            display: none;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>TNS Inventory Tracker</h1>
+    <p>Please sign in with Google to save your inventory data.</p>
+    <button onclick="googleSignIn()">Sign In with Google</button>
+    <br><br>
+
+    <button onclick="showAddProductForm()">Add New Product</button>
+    <button onclick="scanBarcode()">Sold Out (Scan)</button>
+
+    <div id="add-product-form">
+        <h2>Add New Product</h2>
+        <input type="text" id="product-name" placeholder="Product Name"><br>
+        <button onclick="scanAndAddProduct()">Scan Barcode to Add</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Barcode</th>
+                <th>Product Name</th>
+                <th>Sold Count</th>
+            </tr>
+        </thead>
+        <tbody id="inventory-table-body"></tbody>
+    </table>
+
+    <script>
+        let inventory = JSON.parse(localStorage.getItem("inventory")) || {};
+
+        function googleSignIn() {
+            alert("Google Sign-In not yet implemented. Placeholder only.");
+            // Integration with Google API would go here
+        }
+
+        function showAddProductForm() {
+            document.getElementById("add-product-form").style.display = "block";
+        }
+
+        function scanAndAddProduct() {
+            const productName = document.getElementById("product-name").value;
+            if (!productName) {
+                alert("Please enter a product name first.");
+                return;
+            }
+
+            const scanner = new Instascan.Scanner({ video: document.createElement('video') });
+            scanner.addListener('scan', function (barcode) {
+                if (!inventory[barcode]) {
+                    inventory[barcode] = { name: productName, sold: 0 };
+                    localStorage.setItem("inventory", JSON.stringify(inventory));
+                    updateTable();
+                    alert("Product added: " + productName);
+                } else {
+                    alert("This barcode is already registered.");
+                }
+                scanner.stop();
+            });
+            Instascan.Camera.getCameras().then(function (cameras) {
+                if (cameras.length > 0) {
+                    scanner.start(cameras[0]);
+                } else {
+                    alert("No cameras found.");
+                }
+            }).catch(function (e) {
+                console.error(e);
+                alert("Camera error: " + e);
+            });
+        }
+
+        function scanBarcode() {
+            const scanner = new Instascan.Scanner({ video: document.createElement('video') });
+            scanner.addListener('scan', function (barcode) {
+                if (inventory[barcode]) {
+                    inventory[barcode].sold += 1;
+                } else {
+                    inventory[barcode] = { name: "Unknown Product", sold: 1 };
+                }
+                localStorage.setItem("inventory", JSON.stringify(inventory));
+                updateTable();
+                alert("Sold 1: " + inventory[barcode].name);
+                scanner.stop();
+            });
+            Instascan.Camera.getCameras().then(function (cameras) {
+                if (cameras.length > 0) {
+                    scanner.start(cameras[0]);
+                } else {
+                    alert("No cameras found.");
+                }
+            }).catch(function (e) {
+                console.error(e);
+                alert("Camera error: " + e);
+            });
+        }
+
+        function updateTable() {
+            const table = document.getElementById("inventory-table-body");
+            table.innerHTML = "";
+            for (const code in inventory) {
+                const row = `<tr><td>${code}</td><td>${inventory[code].name}</td><td>${inventory[code].sold}</td></tr>`;
+                table.innerHTML += row;
+            }
+        }
+
+        updateTable();
+    </script>
+
+    <script src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
+</body>
+</html>
